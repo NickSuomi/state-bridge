@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "State Bridge",
+  "version": "0.1.0",
+  "description": "Capture localStorage/sessionStorage from one tab and apply it to another.",
+  "icons": {
+    "16": "icons/bridge-16.png",
+    "32": "icons/bridge-32.png",
+    "48": "icons/bridge-48.png",
+    "128": "icons/bridge-128.png"
+  },
+  "permissions": ["storage", "scripting", "tabs"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "State Bridge",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/bridge-16.png",
+      "32": "icons/bridge-32.png"
+    }
+  },
+  "options_page": "options.html"
+}

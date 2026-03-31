@@ -1,0 +1,11 @@
+dist
+node_modules
+.playwright
+playwright-report
+test-results
+.DS_Store
+.env
+.env.*
+.gitleaksignore
+.idea
+.vscode
