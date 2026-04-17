@@ -58,7 +58,9 @@ describe('snapshot helpers', () => {
 
     expect(popupState.canCapture).toBe(true);
     expect(popupState.canApply).toBe(true);
-    expect(popupState.summaryText).toContain('Captured from https://prod.example.com/app');
+    expect(popupState.summaryText).toContain('prod.example.com');
+    expect(popupState.summaryText).toContain('LS 2');
+    expect(popupState.summaryText).toContain('SS 1');
   });
 
   it('keeps apply disabled when there is no snapshot', () => {

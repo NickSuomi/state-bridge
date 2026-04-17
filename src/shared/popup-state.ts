@@ -19,9 +19,20 @@ export function derivePopupState(
     return {
       canCapture: canUseSelection,
       canApply: false,
-      summaryText: 'No snapshot captured yet.',
+      summaryText: 'No snapshot yet.',
     };
   }
+
+  let sourceHost = summary.sourceUrl;
+  try {
+    sourceHost = new URL(summary.sourceUrl).host;
+  } catch {
+    sourceHost = summary.sourceUrl;
+  }
+
+  const compactTimestamp = summary.capturedAt
+    .replace('T', ' ')
+    .replace(/\.\d{3}Z$/, 'Z');
 
   const storageParts: string[] = [];
   if (summary.counts.local > 0 || settings.defaultSelection.local) {
@@ -34,6 +45,6 @@ export function derivePopupState(
   return {
     canCapture: canUseSelection,
     canApply: canUseSelection,
-    summaryText: `Captured from ${summary.sourceUrl} at ${summary.capturedAt} (${storageParts.join(', ')})`,
+    summaryText: `${sourceHost} · ${compactTimestamp} · ${storageParts.join(' · ')}`,
   };
 }

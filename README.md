@@ -9,6 +9,8 @@ The extension is built for engineers who need to reproduce production-only bugs 
 - Captures `localStorage` from a source tab.
 - Captures `sessionStorage` from a source tab.
 - Applies the latest captured snapshot into a target tab.
+- Exports the latest snapshot into a versioned JSON file for teammate handoff.
+- Imports a shared snapshot file and uses it as the current snapshot.
 - Reloads the target tab after apply.
 - Protects apply targets with an allowlist and an explicit override flow.
 
@@ -27,10 +29,19 @@ The extension is built for engineers who need to reproduce production-only bugs 
 4. Switch to the target tab and click `Apply`.
 5. The extension writes the selected storage into the target origin and reloads the page.
 
+### File Sharing Flow
+
+1. On the source tab, click `Capture`.
+2. In the popup, click `Export file`.
+3. Send the downloaded JSON file to a teammate.
+4. The teammate opens State Bridge and clicks `Import file`.
+5. The imported snapshot becomes the current snapshot and can be applied with the normal `Apply` flow.
+
 The popup is intentionally small and minimal:
 - storage toggles
 - latest snapshot summary
 - capture/apply actions
+- file import/export actions
 - allowlist override only when needed
 
 ## Permissions
@@ -81,6 +92,14 @@ These permissions are broad by design because the tool is meant for local debugg
 4. On the local tab, open State Bridge and click `Apply`.
 5. If the target is outside the allowlist, review the warning and use explicit override only if you really intend to write there.
 
+### Teammate-To-Teammate Sharing
+
+1. Reproduce the problem in your own browser session.
+2. Open State Bridge and click `Capture`.
+3. Click `Export file`.
+4. Send the downloaded `.json` file to your teammate.
+5. Your teammate opens State Bridge, clicks `Import file`, selects the JSON file, and then clicks `Apply` on the target tab.
+
 ### Configure Target Allowlist
 
 1. Open the extension popup.
@@ -118,6 +137,7 @@ pnpm test:e2e
 
 - Use this only for development and debugging.
 - Be careful when copying real user state into a local environment.
+- Exported snapshot files contain raw storage values and may include secrets or PII.
 - Avoid applying snapshots into tabs you do not control.
 - Review the allowlist before using explicit override.
 

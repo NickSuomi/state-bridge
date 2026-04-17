@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "State Bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Capture localStorage/sessionStorage from one tab and apply it to another.",
   "icons": {
     "16": "icons/bridge-16.png",

@@ -1,11 +1,18 @@
 import { DEFAULT_SETTINGS } from './shared/constants';
 import { matchAllowlist, normalizeAllowlistEntries } from './shared/allowlist';
+import {
+  buildSharedSnapshotFilename,
+  parseSharedSnapshot,
+  serializeSharedSnapshot,
+} from './shared/shared-snapshot-file';
 import { filterSnapshot, hasSelectedStorage } from './shared/snapshot';
 import { getExtensionState, getSettings, getSnapshot, saveSettings, saveSnapshot } from './shared/storage';
 import type {
   ApplyResult,
   CaptureResult,
+  ExportSnapshotResult,
   FailureResult,
+  ImportSnapshotResult,
   RuntimeMessage,
   SaveSettingsResult,
   Settings,
@@ -262,6 +269,43 @@ async function saveAllowlist(allowlistEntries: string[]): Promise<SaveSettingsRe
   };
 }
 
+async function exportSnapshot(): Promise<ExportSnapshotResult> {
+  const snapshot = await getSnapshot();
+
+  if (snapshot === null) {
+    return makeFailure('no_snapshot', 'Capture or import a snapshot before exporting it.');
+  }
+
+  return {
+    ok: true,
+    fileName: buildSharedSnapshotFilename(snapshot),
+    fileContent: serializeSharedSnapshot(snapshot),
+  };
+}
+
+async function importSnapshot(fileContent: string): Promise<ImportSnapshotResult> {
+  const parsed = parseSharedSnapshot(fileContent);
+
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  await saveSnapshot(parsed.file.snapshot);
+
+  return {
+    ok: true,
+    snapshot: parsed.file.snapshot,
+    snapshotSummary: {
+      sourceUrl: parsed.file.snapshot.sourceUrl,
+      capturedAt: parsed.file.snapshot.capturedAt,
+      counts: {
+        local: Object.keys(parsed.file.snapshot.localStorage).length,
+        session: Object.keys(parsed.file.snapshot.sessionStorage).length,
+      },
+    },
+  };
+}
+
 chrome.runtime.onInstalled.addListener(async () => {
   await ensureSettings();
 });
@@ -279,6 +323,12 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResp
         sendResponse(
           await applySnapshot(message.selection, Boolean(message.overrideAllowlist), message.tabId),
         );
+        return;
+      case 'export-snapshot':
+        sendResponse(await exportSnapshot());
+        return;
+      case 'import-snapshot':
+        sendResponse(await importSnapshot(message.fileContent));
         return;
       case 'save-settings':
         sendResponse(await saveAllowlist(message.allowlistEntries));

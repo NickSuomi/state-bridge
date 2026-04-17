@@ -16,6 +16,13 @@ export interface Snapshot {
   sessionStorage: StorageAreaSnapshot;
 }
 
+export interface SharedSnapshotFile {
+  kind: 'state-bridge-snapshot';
+  version: 1;
+  exportedAt: string;
+  snapshot: Snapshot;
+}
+
 export interface Settings {
   allowlist: string[];
   defaultSelection: StorageSelection;
@@ -38,6 +45,8 @@ export type ErrorCode =
   | 'capture_failed'
   | 'apply_failed'
   | 'target_not_allowed'
+  | 'invalid_snapshot_file'
+  | 'unsupported_snapshot_version'
   | 'settings_invalid';
 
 export interface OperationError {
@@ -77,6 +86,22 @@ export interface SaveSettingsResult {
   invalidEntries: string[];
 }
 
+export interface ExportSnapshotSuccess {
+  ok: true;
+  fileName: string;
+  fileContent: string;
+}
+
+export type ExportSnapshotResult = ExportSnapshotSuccess | FailureResult;
+
+export interface ImportSnapshotSuccess {
+  ok: true;
+  snapshot: Snapshot;
+  snapshotSummary: SnapshotSummary;
+}
+
+export type ImportSnapshotResult = ImportSnapshotSuccess | FailureResult;
+
 export interface ExtensionState {
   settings: Settings;
   snapshot: Snapshot | null;
@@ -87,4 +112,6 @@ export type RuntimeMessage =
   | { type: 'get-state' }
   | { type: 'capture'; selection: StorageSelection; tabId?: number }
   | { type: 'apply'; selection: StorageSelection; overrideAllowlist?: boolean; tabId?: number }
+  | { type: 'export-snapshot' }
+  | { type: 'import-snapshot'; fileContent: string }
   | { type: 'save-settings'; allowlistEntries: string[] };

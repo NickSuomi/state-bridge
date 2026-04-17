@@ -6,6 +6,8 @@ import type {
   ApplyResult,
   CaptureResult,
   ExtensionState,
+  ExportSnapshotResult,
+  ImportSnapshotResult,
   StorageSelection,
 } from '../shared/types';
 import { parseOptionalTabId, sendRuntimeMessage } from '../ui/runtime';
@@ -16,6 +18,7 @@ const statusMessage = ref('Ready.');
 const statusTone = ref<'neutral' | 'success' | 'error'>('neutral');
 const busy = ref(false);
 const overrideVisible = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
 
 const queryParams = new URLSearchParams(window.location.search);
 const captureTabId = parseOptionalTabId(queryParams.get('captureTabId'));
@@ -38,6 +41,8 @@ const alertClass = computed(() => {
 
   return 'sb-alert';
 });
+
+const canExport = computed(() => extensionState.value !== null && extensionState.value.snapshot !== null);
 
 async function refreshState(): Promise<void> {
   extensionState.value = await sendRuntimeMessage<ExtensionState>({ type: 'get-state' });
@@ -62,6 +67,26 @@ function buildApplyMessage(overrideAllowlist = false) {
   };
 }
 
+function getDisplayHost(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
+function downloadSnapshotFile(fileName: string, fileContent: string): void {
+  const blob = new Blob([fileContent], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = fileName;
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
 async function performCapture(): Promise<void> {
   busy.value = true;
   overrideVisible.value = false;
@@ -73,7 +98,7 @@ async function performCapture(): Promise<void> {
       return;
     }
 
-    setStatus(`Captured from ${new URL(result.snapshot.sourceUrl).host}.`, 'success');
+    setStatus(`Captured from ${getDisplayHost(result.snapshot.sourceUrl)}.`, 'success');
     await refreshState();
   } finally {
     busy.value = false;
@@ -88,7 +113,7 @@ async function performApply(overrideAllowlist = false): Promise<void> {
 
     if (result.ok) {
       overrideVisible.value = false;
-      setStatus(`Applied to ${new URL(result.targetUrl).host}.`, 'success');
+      setStatus(`Applied to ${getDisplayHost(result.targetUrl)}.`, 'success');
       return;
     }
 
@@ -100,6 +125,61 @@ async function performApply(overrideAllowlist = false): Promise<void> {
 
     setStatus(result.error.message, 'error');
   } finally {
+    busy.value = false;
+  }
+}
+
+async function performExport(): Promise<void> {
+  busy.value = true;
+
+  try {
+    const result = await sendRuntimeMessage<ExportSnapshotResult>({ type: 'export-snapshot' });
+
+    if (!result.ok) {
+      setStatus(result.error.message, 'error');
+      return;
+    }
+
+    downloadSnapshotFile(result.fileName, result.fileContent);
+    setStatus(`Exported ${result.fileName}.`, 'success');
+  } finally {
+    busy.value = false;
+  }
+}
+
+function openImportPicker(): void {
+  fileInput.value?.click();
+}
+
+async function onFileSelected(event: Event): Promise<void> {
+  const target = event.target as HTMLInputElement | null;
+  const file = target?.files?.[0];
+
+  if (file === undefined) {
+    return;
+  }
+
+  busy.value = true;
+  overrideVisible.value = false;
+
+  try {
+    const fileContent = await file.text();
+    const result = await sendRuntimeMessage<ImportSnapshotResult>({
+      type: 'import-snapshot',
+      fileContent,
+    });
+
+    if (!result.ok) {
+      setStatus(result.error.message, 'error');
+      return;
+    }
+
+    await refreshState();
+    setStatus(`Imported snapshot from ${getDisplayHost(result.snapshot.sourceUrl)}.`, 'success');
+  } finally {
+    if (target !== null) {
+      target.value = '';
+    }
     busy.value = false;
   }
 }
@@ -117,12 +197,7 @@ onMounted(async () => {
   <div class="sb-shell sb-panel">
     <div class="sb-frame sb-frame--panel sb-pad">
       <header class="sb-header">
-        <div class="sb-brand">
-          <img class="sb-brand__mark" src="/brand/bridge-mark.svg" alt="State Bridge mark" />
-          <div>
-            <h1 class="sb-title">State Bridge</h1>
-          </div>
-        </div>
+        <h1 class="sb-title">State Bridge</h1>
 
         <button class="sb-button sb-button--small sb-button--ghost" type="button" @click="openOptions">
           Options
@@ -130,40 +205,42 @@ onMounted(async () => {
       </header>
 
       <div class="sb-grid">
-        <section class="sb-card sb-pad">
-          <p class="sb-card__title">Storage</p>
+        <input
+          ref="fileInput"
+          type="file"
+          accept="application/json,.json"
+          class="sb-visually-hidden"
+          @change="onFileSelected"
+        />
 
-          <div class="sb-storage-list sb-space-top">
-            <label class="sb-toggle">
-              <input v-model="selection.local" type="checkbox" />
-              <span>
-                <span class="sb-toggle__title">localStorage</span>
-              </span>
-            </label>
-            <label class="sb-toggle">
-              <input v-model="selection.session" type="checkbox" />
-              <span>
-                <span class="sb-toggle__title">sessionStorage</span>
-              </span>
-            </label>
+        <section class="sb-card sb-card--compact sb-pad">
+          <div class="sb-section-head">
+            <p class="sb-card__title">Snapshot</p>
+            <span class="sb-card__meta">{{ popupState.summaryText }}</span>
           </div>
-        </section>
 
-        <section class="sb-card sb-pad">
-          <p class="sb-card__title">Status</p>
-
-          <div class="sb-status-grid sb-space-top">
-            <div class="sb-command-row">
-              <div class="sb-command-row__meta">
-                <span class="sb-command-row__title">Snapshot</span>
-                <span class="sb-command-row__hint">{{ popupState.summaryText }}</span>
-              </div>
-            </div>
-
+          <div class="sb-space-top">
             <div :class="alertClass">
               <strong class="sb-alert__title">{{ statusTone === 'error' ? 'Warning' : 'Info' }}</strong>
               <span class="sb-alert__copy">{{ statusMessage }}</span>
             </div>
+          </div>
+        </section>
+
+        <section class="sb-card sb-card--compact sb-pad">
+          <div class="sb-section-head">
+            <p class="sb-card__title">Storage</p>
+          </div>
+
+          <div class="sb-storage-list sb-storage-list--compact sb-space-top">
+            <label class="sb-toggle">
+              <input v-model="selection.local" type="checkbox" />
+              <span class="sb-toggle__title">Local</span>
+            </label>
+            <label class="sb-toggle">
+              <input v-model="selection.session" type="checkbox" />
+              <span class="sb-toggle__title">Session</span>
+            </label>
           </div>
         </section>
 
@@ -187,6 +264,18 @@ onMounted(async () => {
               @click="performApply(false)"
             >
               Apply
+            </button>
+          </div>
+
+          <div class="sb-action">
+            <button class="sb-button sb-button--ghost" type="button" :disabled="busy || !canExport" @click="performExport">
+              Export
+            </button>
+          </div>
+
+          <div class="sb-action">
+            <button class="sb-button sb-button--ghost" type="button" :disabled="busy" @click="openImportPicker">
+              Import
             </button>
           </div>
 
