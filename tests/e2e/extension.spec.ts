@@ -76,6 +76,8 @@ async function setAllowlist(controlPage: Page, entries: string[]): Promise<SaveS
   return sendRuntimeMessage<SaveSettingsResult>(controlPage, {
     type: 'save-settings',
     allowlistEntries: entries,
+    defaultSelection: { local: true, session: true },
+    autoReload: true,
   });
 }
 

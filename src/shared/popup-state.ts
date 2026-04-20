@@ -19,7 +19,7 @@ export function derivePopupState(
     return {
       canCapture: canUseSelection,
       canApply: false,
-      summaryText: 'No snapshot yet.',
+      summaryText: 'No snapshot captured.',
     };
   }
 

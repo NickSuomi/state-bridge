@@ -252,12 +252,18 @@ async function applySnapshot(
   }
 }
 
-async function saveAllowlist(allowlistEntries: string[]): Promise<SaveSettingsResult> {
+async function saveUserSettings(
+  allowlistEntries: string[],
+  defaultSelection: StorageSelection,
+  autoReload: boolean,
+): Promise<SaveSettingsResult> {
   const currentSettings = await getSettings();
   const normalized = normalizeAllowlistEntries(allowlistEntries);
   const settings: Settings = {
     ...currentSettings,
     allowlist: normalized.rules,
+    defaultSelection,
+    autoReload,
   };
 
   await saveSettings(settings);
@@ -331,7 +337,13 @@ chrome.runtime.onMessage.addListener((message: RuntimeMessage, _sender, sendResp
         sendResponse(await importSnapshot(message.fileContent));
         return;
       case 'save-settings':
-        sendResponse(await saveAllowlist(message.allowlistEntries));
+        sendResponse(
+          await saveUserSettings(
+            message.allowlistEntries,
+            message.defaultSelection,
+            message.autoReload,
+          ),
+        );
         return;
       default:
         sendResponse(makeFailure('settings_invalid', 'Unsupported runtime message.'));
