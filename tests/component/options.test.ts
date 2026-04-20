@@ -45,14 +45,17 @@ describe('OptionsApp', () => {
 
     await flushUi();
     await wrapper.find('textarea').setValue('localhost\n*.dev.example.com');
+    await wrapper.find('input[type="checkbox"][value="session"]').setValue(false);
+    await wrapper.find('input[type="checkbox"][value="local"]').setValue(true);
+    await wrapper.find('input[type="checkbox"][data-setting="auto-reload"]').setValue(false);
     await flushUi();
 
     sendMessage.mockResolvedValueOnce({
       ok: true,
       settings: {
         allowlist: ['localhost', '*.dev.example.com'],
-        defaultSelection: { local: true, session: true },
-        autoReload: true,
+        defaultSelection: { local: true, session: false },
+        autoReload: false,
       },
       invalidEntries: [],
     });
@@ -63,7 +66,12 @@ describe('OptionsApp', () => {
     expect(sendMessage).toHaveBeenLastCalledWith({
       type: 'save-settings',
       allowlistEntries: ['localhost', '*.dev.example.com'],
+      defaultSelection: { local: true, session: false },
+      autoReload: false,
     });
-    expect(wrapper.text()).toContain('Saved.');
+    expect(wrapper.text()).toContain('Save changes');
+    expect(wrapper.text()).toContain('Changes saved.');
+    expect(wrapper.text()).toContain('Default capture selection');
+    expect(wrapper.text()).toContain('Reload target tab after apply');
   });
 });

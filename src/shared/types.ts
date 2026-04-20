@@ -114,4 +114,9 @@ export type RuntimeMessage =
   | { type: 'apply'; selection: StorageSelection; overrideAllowlist?: boolean; tabId?: number }
   | { type: 'export-snapshot' }
   | { type: 'import-snapshot'; fileContent: string }
-  | { type: 'save-settings'; allowlistEntries: string[] };
+  | {
+      type: 'save-settings';
+      allowlistEntries: string[];
+      defaultSelection: StorageSelection;
+      autoReload: boolean;
+    };

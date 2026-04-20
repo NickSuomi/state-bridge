@@ -72,6 +72,12 @@ describe('PopupApp', () => {
 
     await flushUi();
 
+    expect(wrapper.text()).toContain('Settings');
+    expect(wrapper.text()).toContain('Storage to copy');
+    expect(wrapper.text()).toContain('Import snapshot');
+    expect(wrapper.text()).toContain('Export snapshot');
+    expect(wrapper.text()).toContain('No snapshot captured');
+
     sendMessage.mockResolvedValueOnce({
       ok: true,
       snapshot: {
@@ -107,8 +113,11 @@ describe('PopupApp', () => {
       { type: 'capture', selection: { local: true, session: true }, tabId: undefined },
     ]);
     expect(wrapper.text()).toContain('Captured from prod.example.com.');
+    expect(wrapper.text()).toContain('prod.example.com');
+    expect(wrapper.text()).toContain('Local storage');
+    expect(wrapper.text()).toContain('Session storage');
 
-    await findButtonByText(wrapper, 'Options').trigger('click');
+    await findButtonByText(wrapper, 'Settings').trigger('click');
 
     expect(openOptionsPage).toHaveBeenCalledTimes(1);
   });
@@ -118,7 +127,7 @@ describe('PopupApp', () => {
 
     await flushUi();
 
-    expect(findButtonByText(wrapper, 'Export').attributes('disabled')).toBeDefined();
+    expect(findButtonByText(wrapper, 'Export snapshot').attributes('disabled')).toBeDefined();
   });
 
   it('imports a snapshot file and refreshes popup state', async () => {
@@ -204,7 +213,7 @@ describe('PopupApp', () => {
     ]);
     expect(wrapper.text()).toContain('Imported snapshot from prod.example.com.');
     expect(wrapper.text()).toContain('prod.example.com');
-    expect(wrapper.text()).toContain('LS 1');
+    expect(wrapper.text()).toContain('Local keys1');
   });
 
   it('shows clear error on invalid import and keeps existing summary', async () => {
@@ -253,7 +262,7 @@ describe('PopupApp', () => {
 
     expect(wrapper.text()).toContain('Snapshot file is not valid JSON.');
     expect(wrapper.text()).toContain('prod.example.com');
-    expect(wrapper.text()).toContain('LS 1');
+    expect(wrapper.text()).toContain('Local keys1');
     expect(sendMessage).toHaveBeenCalledTimes(2);
   });
 
